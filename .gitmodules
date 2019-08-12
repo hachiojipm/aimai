@@ -1,0 +1,3 @@
+[submodule "Si4703_FM_Tuner_Evaluation_Board"]
+	path = Si4703_FM_Tuner_Evaluation_Board
+	url = git@github.com:moznion/Si4703_FM_Tuner_Evaluation_Board.git
