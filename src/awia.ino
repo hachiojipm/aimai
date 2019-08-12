@@ -2,14 +2,12 @@
 #include <SparkFunSi4703.h>
 #include <Adafruit_Si4713.h>
 
-// FIXME
-#define TX_TEST_FREQ 10230 // 10230 == 102.30 MHz
-
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 Adafruit_Si4713 tx(TX_RST_PIN);
 
 volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
+volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 
 void setup() {
     Serial.begin(115200);
@@ -44,45 +42,60 @@ void initRx() {
 
 void initTx() {
     detachInterrupt(RIGHT_ENC_PIN_A);
-    attachInterrupt(RIGHT_ENC_PIN_A, readEncForTextInput, CHANGE);
+    attachInterrupt(RIGHT_ENC_PIN_A, changeTxFreq, CHANGE);
     detachInterrupt(RIGHT_ENC_PIN_B);
-    attachInterrupt(RIGHT_ENC_PIN_B, readEncForTextInput, CHANGE);
+    attachInterrupt(RIGHT_ENC_PIN_B, changeTxFreq, CHANGE);
 
     tx.begin();
     tx.setTXpower(TX_POWER);
-    tx.tuneFM(TX_TEST_FREQ);
     tx.beginRDS();
     tx.setRDSstation("JOHN DOE");
     tx.setRDSbuffer("(empty)");
 }
 
-bool isInit = true;
+volatile bool rxShouldInit = true;
+volatile bool txShouldInit = true;
 int mainLoopRxFreq = 0;
 int mainLoopRxVol = 0;
-
-void loop() {
-    if (isInit) {
-        // TODO read from nonvolatile memory
-        rx.setChannel(800);
-        rx.setVolume(1);
-        isInit = false;
-    }
-
-    if (mainLoopRxFreq != rxFreq) {
-        Serial.println("freq change change");
-        rx.setChannel(rxFreq);
-        mainLoopRxFreq = rxFreq;
-    }
-
-    if (mainLoopRxVol != rxVol) {
-        rx.setVolume(rxVol);
-        mainLoopRxVol = rxVol;
-    }
-
-    // FIXME implement RDS Rx
-}
+int mainLoopTxFreq = 0;
 
 void txLoop() {
+    if (txShouldInit) {
+        // TODO read from nonvolatile memory
+        txFreq = JP_MINIMUM_FM_MHZ;
+        mainLoopTxFreq = txFreq;
+        tx.tuneFM(txFreq * 10);
+        txShouldInit = false;
+    }
+
+    if (mainLoopTxFreq != txFreq) {
+        tx.tuneFM(txFreq * 10);
+        mainLoopTxFreq = txFreq;
+    }
+}
+
+void loop() {
+    txLoop();
+//    if (rxShouldInit) {
+//        // TODO read from nonvolatile memory
+//        rx.setChannel(800);
+//        rx.setVolume(1);
+//        rxShouldInit = false;
+//    }
+//
+//    if (mainLoopRxFreq != rxFreq) {
+//        Serial.println("freq change change");
+//        rx.setChannel(rxFreq);
+//        mainLoopRxFreq = rxFreq;
+//    }
+//
+//    if (mainLoopRxVol != rxVol) {
+//        rx.setVolume(rxVol);
+//        mainLoopRxVol = rxVol;
+//    }
+//
+//    // FIXME implement RDS Rx
+
 }
 
 #define RUNES_NUM 44
@@ -135,6 +148,23 @@ void changeRxFreq() {
         }
         double f = rxFreq / 10.0;
         Serial.print("rx freq: ");
+        Serial.print(f);
+        Serial.print("MHz");
+    }
+}
+
+volatile byte posForTxFreq;
+
+void changeTxFreq() {
+    EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForTxFreq, &txFreq);
+    if (encStatus.currentCnt != encStatus.previousCnt) {
+        if (encStatus.currentCnt < JP_MINIMUM_FM_MHZ) {
+            txFreq = JP_MAXIMUM_FM_MHZ;
+        } else if (encStatus.currentCnt > JP_MAXIMUM_FM_MHZ) {
+            txFreq = JP_MINIMUM_FM_MHZ;
+        }
+        double f = txFreq / 10.0;
+        Serial.print("tx freq: ");
         Serial.print(f);
         Serial.print("MHz");
     }
