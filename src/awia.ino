@@ -9,6 +9,9 @@ volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 
+volatile bool rxShouldInit = true;
+volatile bool txShouldInit = true;
+
 void (*concreteLoop)();
 
 void setup() {
@@ -21,9 +24,15 @@ void setup() {
     pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
 
-//    initRx();
-    initTx();
-    concreteLoop = txLoop;
+    pinMode(RX_MODE_PIN, INPUT_PULLUP);
+    detachInterrupt(RX_MODE_PIN);
+    attachInterrupt(RX_MODE_PIN, loadActionMode, CHANGE);
+
+    pinMode(TX_MODE_PIN, INPUT_PULLUP);
+    detachInterrupt(TX_MODE_PIN);
+    attachInterrupt(TX_MODE_PIN, loadActionMode, CHANGE);
+
+    loadActionMode();
 }
 
 void initRx() {
@@ -40,6 +49,8 @@ void initRx() {
     rx.powerOn();
     rx.setChannel(0);
     rx.setVolume(0);
+
+    rxShouldInit = true;
 }
 
 void initTx() {
@@ -50,13 +61,15 @@ void initTx() {
 
     tx.begin();
     tx.setTXpower(TX_POWER);
+
+    // TODO
     tx.beginRDS();
     tx.setRDSstation("JOHN DOE");
     tx.setRDSbuffer("(empty)");
+
+    txShouldInit = true;
 }
 
-volatile bool rxShouldInit = true;
-volatile bool txShouldInit = true;
 int mainLoopRxFreq = 0;
 int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
@@ -96,6 +109,9 @@ void txLoop() {
         tx.tuneFM(txFreq * 10);
         mainLoopTxFreq = txFreq;
     }
+}
+
+void nopLoop() {
 }
 
 void loop() {
@@ -218,4 +234,43 @@ EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte *pos, volatile
 
     EncCountStatus encStatus = {previousCnt, *cnt};
     return encStatus;
+}
+
+void inactivateRx() {
+    pinMode(RX_RST_PIN, OUTPUT);
+    digitalWrite(RX_RST_PIN, HIGH);
+    delay(10);
+    digitalWrite(RX_RST_PIN, LOW);
+    delay(10);
+    digitalWrite(RX_RST_PIN, HIGH);
+}
+
+void inactivateTx() {
+    tx.reset();
+}
+
+void loadActionMode() {
+    int rx = digitalRead(RX_MODE_PIN);
+    int tx = digitalRead(TX_MODE_PIN);
+    if (rx == HIGH && tx == LOW) {
+        Serial.println("TX mode");
+        inactivateRx();
+        initTx();
+        concreteLoop = txLoop;
+        return;
+    }
+
+    if (tx == HIGH && rx == LOW) {
+        Serial.println("RX mode");
+        inactivateTx();
+        initRx();
+        concreteLoop = rxLoop;
+        return;
+    }
+
+    // both of the mode pins are 0 or 1, this handles it as NOP mode
+    Serial.println("NOP mode");
+    inactivateTx();
+    inactivateRx();
+    concreteLoop = nopLoop;
 }

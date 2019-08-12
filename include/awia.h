@@ -10,6 +10,9 @@
 #define RX_RST_PIN 17
 #define TX_RST_PIN 16
 
+#define RX_MODE_PIN 32
+#define TX_MODE_PIN 33
+
 #define LEFT_ENC_SW_PIN 23
 #define LEFT_ENC_PIN_A 18
 #define LEFT_ENC_PIN_B 19
@@ -39,6 +42,8 @@ void changeRxFreq();
 void changeTxFreq();
 void txLoop();
 void rxLoop();
+void nopLoop();
+void loadActionMode();
 EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte* pos, volatile int16_t* cnt);
 
 #endif // _AWIA_INC_GUARD_H_
