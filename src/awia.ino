@@ -21,8 +21,10 @@ void setup() {
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
+    pinMode(RIGHT_ENC_SW_PIN, INPUT);
     pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
+    pinMode(LEFT_ENC_SW_PIN, INPUT);
 
     pinMode(RX_MODE_PIN, INPUT_PULLUP);
     detachInterrupt(RX_MODE_PIN);
@@ -64,7 +66,7 @@ void initTx() {
 
     // TODO
     tx.beginRDS();
-    tx.setRDSstation("JOHN DOE");
+    tx.setRDSstation(STATION_NAME);
     tx.setRDSbuffer("(empty)");
 
     txShouldInit = true;

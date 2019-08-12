@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define STATION_NAME "JOHN DOE"
+
 #define UNUSED -1
 
 #define SDA_PIN 21
@@ -16,7 +18,7 @@
 #define LEFT_ENC_SW_PIN 23
 #define LEFT_ENC_PIN_A 18
 #define LEFT_ENC_PIN_B 19
-#define RIGHT_ENC_PIN 14
+#define RIGHT_ENC_SW_PIN 14
 #define RIGHT_ENC_PIN_A 12
 #define RIGHT_ENC_PIN_B 13
 
