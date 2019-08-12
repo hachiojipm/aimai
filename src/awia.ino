@@ -1,7 +1,7 @@
 #include "awia.h"
 #include <SparkFunSi4703.h>
 
-Si4703_Breakout radio(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
+Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 
 volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
@@ -30,9 +30,9 @@ void initRx() {
     detachInterrupt(RIGHT_ENC_PIN_B);
     attachInterrupt(RIGHT_ENC_PIN_B, changeRxFreq, CHANGE);
 
-    radio.powerOn();
-    radio.setChannel(0);
-    radio.setVolume(0);
+    rx.powerOn();
+    rx.setChannel(0);
+    rx.setVolume(0);
 }
 
 void initTx() {
@@ -49,19 +49,19 @@ int mainLoopRxVol = 0;
 void loop() {
     if (isInit) {
         // TODO read from nonvolatile memory
-        radio.setChannel(800);
-        radio.setVolume(1);
+        rx.setChannel(800);
+        rx.setVolume(1);
         isInit = false;
     }
 
     if (mainLoopRxFreq != rxFreq) {
         Serial.println("freq change change");
-        radio.setChannel(rxFreq);
+        rx.setChannel(rxFreq);
         mainLoopRxFreq = rxFreq;
     }
 
     if (mainLoopRxVol != rxVol) {
-        radio.setVolume(rxVol);
+        rx.setVolume(rxVol);
         mainLoopRxVol = rxVol;
     }
 
