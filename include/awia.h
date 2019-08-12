@@ -3,10 +3,10 @@
 
 #include <Arduino.h>
 
-#define LEFT_ENC_PIN_A 32
-#define LEFT_ENC_PIN_B 33
-#define RIGHT_ENC_PIN_A 25
-#define RIGHT_ENC_PIN_B 26
+#define LEFT_ENC_PIN_A 18
+#define LEFT_ENC_PIN_B 19
+#define RIGHT_ENC_PIN_A 12
+#define RIGHT_ENC_PIN_B 13
 #define JP_MINIMUM_FM_MHZ 761
 #define JP_MAXIMUM_FM_MHZ 949
 
