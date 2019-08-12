@@ -1,4 +1,10 @@
 #include "awia.h"
+#include <SparkFunSi4703.h>
+
+Si4703_Breakout radio(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
+
+volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
+volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 
 void setup() {
     Serial.begin(115200);
@@ -23,6 +29,10 @@ void initRx() {
     attachInterrupt(RIGHT_ENC_PIN_A, changeRxFreq, CHANGE);
     detachInterrupt(RIGHT_ENC_PIN_B);
     attachInterrupt(RIGHT_ENC_PIN_B, changeRxFreq, CHANGE);
+
+    radio.powerOn();
+    radio.setChannel(0);
+    radio.setVolume(0);
 }
 
 void initTx() {
@@ -32,9 +42,30 @@ void initTx() {
     attachInterrupt(RIGHT_ENC_PIN_B, readEncForTextInput, CHANGE);
 }
 
+bool isInit = true;
+int mainLoopRxFreq = 0;
+int mainLoopRxVol = 0;
+
 void loop() {
-    Serial.println("ready");
-    while(1);
+    if (isInit) {
+        // TODO read from nonvolatile memory
+        radio.setChannel(800);
+        radio.setVolume(1);
+        isInit = false;
+    }
+
+    if (mainLoopRxFreq != rxFreq) {
+        Serial.println("freq change change");
+        radio.setChannel(rxFreq);
+        mainLoopRxFreq = rxFreq;
+    }
+
+    if (mainLoopRxVol != rxVol) {
+        radio.setVolume(rxVol);
+        mainLoopRxVol = rxVol;
+    }
+
+    // FIXME implement RDS Rx
 }
 
 char runes[40] = {
@@ -58,7 +89,6 @@ void readEncForTextInput() {
 }
 
 volatile byte posForRxVol;
-volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 void changeRxVolume() {
     EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForRxVol, &rxVol);
     if (encStatus.currentCnt != encStatus.previousCnt) {
@@ -67,12 +97,12 @@ void changeRxVolume() {
         } else if (encStatus.currentCnt > 15) {
             rxVol = 15;
         }
+        Serial.print("rx vol: ");
         Serial.println(rxVol);
     }
 }
 
 volatile byte posForRxFreq;
-volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 void changeRxFreq() {
     EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForRxFreq, &rxFreq);
     if (encStatus.currentCnt != encStatus.previousCnt) {
@@ -82,7 +112,9 @@ void changeRxFreq() {
             rxFreq = JP_MINIMUM_FM_MHZ;
         }
         double f = rxFreq / 10.0;
-        Serial.println(f);
+        Serial.print("rx freq: ");
+        Serial.print(f);
+        Serial.print("MHz");
     }
 }
 

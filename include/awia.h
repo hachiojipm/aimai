@@ -3,10 +3,17 @@
 
 #include <Arduino.h>
 
+#define UNUSED -1
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define RX_RST_PIN 17
+
 #define LEFT_ENC_PIN_A 18
 #define LEFT_ENC_PIN_B 19
 #define RIGHT_ENC_PIN_A 12
 #define RIGHT_ENC_PIN_B 13
+
 #define JP_MINIMUM_FM_MHZ 761
 #define JP_MAXIMUM_FM_MHZ 949
 
