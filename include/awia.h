@@ -36,6 +36,9 @@ void initTx();
 void readEncForTextInput();
 void changeRxVolume();
 void changeRxFreq();
+void changeTxFreq();
+void txLoop();
+void rxLoop();
 EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte* pos, volatile int16_t* cnt);
 
 #endif // _AWIA_INC_GUARD_H_
