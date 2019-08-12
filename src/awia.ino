@@ -21,10 +21,10 @@ void setup() {
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
-    pinMode(RIGHT_ENC_SW_PIN, INPUT);
+    pinMode(RIGHT_ENC_SW_PIN, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
-    pinMode(LEFT_ENC_SW_PIN, INPUT);
+    pinMode(LEFT_ENC_SW_PIN, INPUT_PULLUP);
 
     pinMode(RX_MODE_PIN, INPUT_PULLUP);
     detachInterrupt(RX_MODE_PIN);
@@ -55,11 +55,27 @@ void initRx() {
     rxShouldInit = true;
 }
 
+#define RDS_TEXT_LENGTH 20
+// TODO
+char rdsText[RDS_TEXT_LENGTH] = {'(', 'e', 'm', 'p', 't', 'y', ')', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
+char rdsBuff[RDS_TEXT_LENGTH];
+volatile int rdsBuffCursor = 0;
+
 void initTx() {
+    detachInterrupt(RIGHT_ENC_PIN_A);
+    attachInterrupt(RIGHT_ENC_PIN_A, editRDSText, CHANGE);
+    detachInterrupt(RIGHT_ENC_PIN_B);
+    attachInterrupt(RIGHT_ENC_PIN_B, editRDSText, CHANGE);
+
+    detachInterrupt(RIGHT_ENC_SW_PIN);
+    attachInterrupt(RIGHT_ENC_SW_PIN, enterRDSTextCharacter, FALLING);
+
     detachInterrupt(LEFT_ENC_PIN_A);
     attachInterrupt(LEFT_ENC_PIN_A, changeTxFreq, CHANGE);
     detachInterrupt(LEFT_ENC_PIN_B);
     attachInterrupt(LEFT_ENC_PIN_B, changeTxFreq, CHANGE);
+    detachInterrupt(LEFT_ENC_SW_PIN);
+    attachInterrupt(LEFT_ENC_SW_PIN, escapeRDSTextEditing, FALLING);
 
     tx.begin();
     tx.setTXpower(TX_POWER);
@@ -67,7 +83,7 @@ void initTx() {
     // TODO
     tx.beginRDS();
     tx.setRDSstation(STATION_NAME);
-    tx.setRDSbuffer("(empty)");
+    tx.setRDSbuffer(rdsText);
 
     txShouldInit = true;
 }
@@ -75,17 +91,18 @@ void initTx() {
 int mainLoopRxFreq = 0;
 int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
+volatile bool rdsTextChanged = false;
 
 void rxLoop() {
     if (rxShouldInit) {
+        rxShouldInit = false;
+
         // TODO read from nonvolatile memory
         rx.setChannel(800);
         rx.setVolume(1);
-        rxShouldInit = false;
     }
 
     if (mainLoopRxFreq != rxFreq) {
-        Serial.println("freq change change");
         rx.setChannel(rxFreq);
         mainLoopRxFreq = rxFreq;
     }
@@ -100,16 +117,22 @@ void rxLoop() {
 
 void txLoop() {
     if (txShouldInit) {
+        txShouldInit = false;
+
         // TODO read from nonvolatile memory
         txFreq = JP_MINIMUM_FM_MHZ;
         mainLoopTxFreq = txFreq;
         tx.tuneFM(txFreq * 10);
-        txShouldInit = false;
     }
 
     if (mainLoopTxFreq != txFreq) {
         tx.tuneFM(txFreq * 10);
         mainLoopTxFreq = txFreq;
+    }
+
+    if (rdsTextChanged) {
+        tx.setRDSbuffer(rdsText);
+        rdsTextChanged = false;
     }
 }
 
@@ -120,33 +143,10 @@ void loop() {
     (*concreteLoop)();
 }
 
-#define RUNES_NUM 44
-char runes[RUNES_NUM] = {
-        ' ',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '-',
-        '_', '@', '(', ')'
-};
-volatile byte posForTextInput;
-volatile int16_t textInputCursor = 0;
-
-void readEncForTextInput() {
-    EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForTextInput, &textInputCursor);
-    if (encStatus.currentCnt != encStatus.previousCnt) {
-        if (encStatus.currentCnt < 0) { // alignment
-            textInputCursor = RUNES_NUM - 1;
-        } else if (encStatus.currentCnt > (RUNES_NUM - 1)) {
-            textInputCursor = 0;
-        }
-        Serial.println(runes[textInputCursor]);
-    }
-}
-
 volatile byte posForRxVol;
 
 void changeRxVolume() {
-    EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForRxVol, &rxVol);
+    EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForRxVol, &rxVol);
     if (encStatus.currentCnt != encStatus.previousCnt) {
         if (encStatus.currentCnt <= 0) {
             rxVol = 0;
@@ -161,7 +161,7 @@ void changeRxVolume() {
 volatile byte posForRxFreq;
 
 void changeRxFreq() {
-    EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForRxFreq, &rxFreq);
+    EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForRxFreq, &rxFreq);
     if (encStatus.currentCnt != encStatus.previousCnt) {
         if (encStatus.currentCnt < JP_MINIMUM_FM_MHZ) {
             rxFreq = JP_MAXIMUM_FM_MHZ;
@@ -178,7 +178,7 @@ void changeRxFreq() {
 volatile byte posForTxFreq;
 
 void changeTxFreq() {
-    EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForTxFreq, &txFreq);
+    EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForTxFreq, &txFreq);
     if (encStatus.currentCnt != encStatus.previousCnt) {
         if (encStatus.currentCnt < JP_MINIMUM_FM_MHZ) {
             txFreq = JP_MAXIMUM_FM_MHZ;
@@ -190,6 +190,55 @@ void changeTxFreq() {
         Serial.print(f);
         Serial.print("MHz");
     }
+}
+
+#define RUNES_NUM 44
+char runes[RUNES_NUM] = {
+        ' ',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '-',
+        '_', '@', '(', ')'
+};
+volatile byte posForTextInput;
+volatile int16_t textInputCursor = 0;
+volatile bool rdsEditing = false;
+
+void editRDSText() {
+    if (!rdsEditing) {
+        rdsEditing = true;
+        rdsBuffCursor = 0;
+    }
+
+    EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForTextInput, &textInputCursor);
+    if (encStatus.currentCnt != encStatus.previousCnt) {
+        if (encStatus.currentCnt < 0) { // alignment
+            textInputCursor = RUNES_NUM - 1;
+        } else if (encStatus.currentCnt > (RUNES_NUM - 1)) {
+            textInputCursor = 0;
+        }
+        Serial.println(runes[textInputCursor]);
+    }
+}
+
+void enterRDSTextCharacter() {
+    if (!rdsEditing) {
+        return;
+    }
+    Serial.print("char: ");
+    Serial.println(runes[textInputCursor]);
+    rdsBuff[rdsBuffCursor++] = runes[textInputCursor];
+    if (rdsBuffCursor >= RDS_TEXT_LENGTH) {
+        escapeRDSTextEditing();
+        memcpy(rdsText, rdsBuff, RDS_TEXT_LENGTH);
+        Serial.print("RDS Text: ");
+        Serial.println(rdsText);
+        rdsTextChanged = true;
+    }
+}
+
+void escapeRDSTextEditing() {
+    rdsEditing = false;
 }
 
 EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte *pos, volatile int16_t *cnt) {

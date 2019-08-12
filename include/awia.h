@@ -38,7 +38,9 @@ struct EncCountStatus {
 
 void initRx();
 void initTx();
-void readEncForTextInput();
+void editRDSText();
+void enterRDSTextCharacter();
+void escapeRDSTextEditing();
 void changeRxVolume();
 void changeRxFreq();
 void changeTxFreq();
