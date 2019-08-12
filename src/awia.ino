@@ -38,15 +38,15 @@ void setup() {
 }
 
 void initRx() {
-    detachInterrupt(LEFT_ENC_PIN_A);
-    attachInterrupt(LEFT_ENC_PIN_A, changeRxVolume, CHANGE);
-    detachInterrupt(LEFT_ENC_PIN_B);
-    attachInterrupt(LEFT_ENC_PIN_B, changeRxVolume, CHANGE);
-
     detachInterrupt(RIGHT_ENC_PIN_A);
-    attachInterrupt(RIGHT_ENC_PIN_A, changeRxFreq, CHANGE);
+    attachInterrupt(RIGHT_ENC_PIN_A, changeRxVolume, CHANGE);
     detachInterrupt(RIGHT_ENC_PIN_B);
-    attachInterrupt(RIGHT_ENC_PIN_B, changeRxFreq, CHANGE);
+    attachInterrupt(RIGHT_ENC_PIN_B, changeRxVolume, CHANGE);
+
+    detachInterrupt(LEFT_ENC_PIN_A);
+    attachInterrupt(LEFT_ENC_PIN_A, changeRxFreq, CHANGE);
+    detachInterrupt(LEFT_ENC_PIN_B);
+    attachInterrupt(LEFT_ENC_PIN_B, changeRxFreq, CHANGE);
 
     rx.powerOn();
     rx.setChannel(0);
@@ -56,10 +56,10 @@ void initRx() {
 }
 
 void initTx() {
-    detachInterrupt(RIGHT_ENC_PIN_A);
-    attachInterrupt(RIGHT_ENC_PIN_A, changeTxFreq, CHANGE);
-    detachInterrupt(RIGHT_ENC_PIN_B);
-    attachInterrupt(RIGHT_ENC_PIN_B, changeTxFreq, CHANGE);
+    detachInterrupt(LEFT_ENC_PIN_A);
+    attachInterrupt(LEFT_ENC_PIN_A, changeTxFreq, CHANGE);
+    detachInterrupt(LEFT_ENC_PIN_B);
+    attachInterrupt(LEFT_ENC_PIN_B, changeTxFreq, CHANGE);
 
     tx.begin();
     tx.setTXpower(TX_POWER);
