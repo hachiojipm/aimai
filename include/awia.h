@@ -8,6 +8,7 @@
 #define SDA_PIN 21
 #define SCL_PIN 22
 #define RX_RST_PIN 17
+#define TX_RST_PIN 16
 
 #define LEFT_ENC_SW_PIN 23
 #define LEFT_ENC_PIN_A 18
@@ -18,6 +19,7 @@
 
 #define JP_MINIMUM_FM_MHZ 761
 #define JP_MAXIMUM_FM_MHZ 949
+#define TX_POWER 115
 
 enum EncSide {
     LEFT,

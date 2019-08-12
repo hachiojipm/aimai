@@ -1,7 +1,12 @@
 #include "awia.h"
 #include <SparkFunSi4703.h>
+#include <Adafruit_Si4713.h>
+
+// FIXME
+#define TX_TEST_FREQ 10230 // 10230 == 102.30 MHz
 
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
+Adafruit_Si4713 tx(TX_RST_PIN);
 
 volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
@@ -16,7 +21,9 @@ void setup() {
     pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
 
-    initRx();
+    // TODO
+//    initRx();
+    initTx();
 }
 
 void initRx() {
@@ -40,6 +47,13 @@ void initTx() {
     attachInterrupt(RIGHT_ENC_PIN_A, readEncForTextInput, CHANGE);
     detachInterrupt(RIGHT_ENC_PIN_B);
     attachInterrupt(RIGHT_ENC_PIN_B, readEncForTextInput, CHANGE);
+
+    tx.begin();
+    tx.setTXpower(TX_POWER);
+    tx.tuneFM(TX_TEST_FREQ);
+    tx.beginRDS();
+    tx.setRDSstation("JOHN DOE");
+    tx.setRDSbuffer("(empty)");
 }
 
 bool isInit = true;
@@ -68,11 +82,16 @@ void loop() {
     // FIXME implement RDS Rx
 }
 
-char runes[40] = {
+void txLoop() {
+}
+
+#define RUNES_NUM 44
+char runes[RUNES_NUM] = {
         ' ',
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
         'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '!', '?', '@',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '-',
+        '_', '@', '(', ')'
 };
 volatile byte posForTextInput;
 volatile int16_t textInputCursor = 0;
@@ -81,8 +100,8 @@ void readEncForTextInput() {
     EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForTextInput, &textInputCursor);
     if (encStatus.currentCnt != encStatus.previousCnt) {
         if (encStatus.currentCnt < 0) { // alignment
-            textInputCursor = 39;
-        } else if (encStatus.currentCnt > 39) {
+            textInputCursor = RUNES_NUM - 1;
+        } else if (encStatus.currentCnt > (RUNES_NUM - 1)) {
             textInputCursor = 0;
         }
         Serial.println(runes[textInputCursor]);
