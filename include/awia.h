@@ -9,8 +9,10 @@
 #define SCL_PIN 22
 #define RX_RST_PIN 17
 
+#define LEFT_ENC_SW_PIN 23
 #define LEFT_ENC_PIN_A 18
 #define LEFT_ENC_PIN_B 19
+#define RIGHT_ENC_PIN 14
 #define RIGHT_ENC_PIN_A 12
 #define RIGHT_ENC_PIN_B 13
 
