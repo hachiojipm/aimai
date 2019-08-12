@@ -76,6 +76,7 @@ char runes[40] = {
 };
 volatile byte posForTextInput;
 volatile int16_t textInputCursor = 0;
+
 void readEncForTextInput() {
     EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForTextInput, &textInputCursor);
     if (encStatus.currentCnt != encStatus.previousCnt) {
@@ -89,6 +90,7 @@ void readEncForTextInput() {
 }
 
 volatile byte posForRxVol;
+
 void changeRxVolume() {
     EncCountStatus encStatus = _readEncCountStatus(LEFT, &posForRxVol, &rxVol);
     if (encStatus.currentCnt != encStatus.previousCnt) {
@@ -103,6 +105,7 @@ void changeRxVolume() {
 }
 
 volatile byte posForRxFreq;
+
 void changeRxFreq() {
     EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForRxFreq, &rxFreq);
     if (encStatus.currentCnt != encStatus.previousCnt) {
@@ -118,9 +121,9 @@ void changeRxFreq() {
     }
 }
 
-EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte* pos, volatile int16_t* cnt) {
+EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte *pos, volatile int16_t *cnt) {
     byte current;
-    switch(encSide) {
+    switch (encSide) {
         case LEFT:
             current = (!digitalRead(LEFT_ENC_PIN_B) << 1) + !digitalRead(LEFT_ENC_PIN_A);
             break;
@@ -151,8 +154,7 @@ EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte* pos, volatile
             if (current == 0b00) {
                 if (direction == 0b01 && previous == 0b11) {
                     (*cnt)++;
-                }
-                else if (direction == 0b11 && previous == 0b01) {
+                } else if (direction == 0b11 && previous == 0b01) {
                     (*cnt)--;
                 }
                 direction = 0b00;
