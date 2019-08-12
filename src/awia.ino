@@ -9,6 +9,8 @@ volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 
+void (*concreteLoop)();
+
 void setup() {
     Serial.begin(115200);
     while (!Serial);
@@ -19,9 +21,9 @@ void setup() {
     pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
 
-    // TODO
 //    initRx();
     initTx();
+    concreteLoop = txLoop;
 }
 
 void initRx() {
@@ -59,6 +61,28 @@ int mainLoopRxFreq = 0;
 int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
 
+void rxLoop() {
+    if (rxShouldInit) {
+        // TODO read from nonvolatile memory
+        rx.setChannel(800);
+        rx.setVolume(1);
+        rxShouldInit = false;
+    }
+
+    if (mainLoopRxFreq != rxFreq) {
+        Serial.println("freq change change");
+        rx.setChannel(rxFreq);
+        mainLoopRxFreq = rxFreq;
+    }
+
+    if (mainLoopRxVol != rxVol) {
+        rx.setVolume(rxVol);
+        mainLoopRxVol = rxVol;
+    }
+
+    // FIXME implement RDS Rx
+}
+
 void txLoop() {
     if (txShouldInit) {
         // TODO read from nonvolatile memory
@@ -75,27 +99,7 @@ void txLoop() {
 }
 
 void loop() {
-    txLoop();
-//    if (rxShouldInit) {
-//        // TODO read from nonvolatile memory
-//        rx.setChannel(800);
-//        rx.setVolume(1);
-//        rxShouldInit = false;
-//    }
-//
-//    if (mainLoopRxFreq != rxFreq) {
-//        Serial.println("freq change change");
-//        rx.setChannel(rxFreq);
-//        mainLoopRxFreq = rxFreq;
-//    }
-//
-//    if (mainLoopRxVol != rxVol) {
-//        rx.setVolume(rxVol);
-//        mainLoopRxVol = rxVol;
-//    }
-//
-//    // FIXME implement RDS Rx
-
+    (*concreteLoop)();
 }
 
 #define RUNES_NUM 44
