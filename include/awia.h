@@ -29,6 +29,8 @@
 #define RDS_READING_TIMEOUT_MILLIS 10000
 #define RDS_READING_PERIOD_MICROS 15000000
 
+#define OLED_ADDR 0x3c
+
 enum EncSide {
     LEFT,
     RIGHT,

@@ -3,7 +3,9 @@
 #include <Adafruit_Si4713.h>
 #include <esp32-hal-timer.h>
 #include <esp_attr.h>
+#include <SSD1306.h>
 
+SSD1306 display(OLED_ADDR, SDA_PIN, SCL_PIN, GEOMETRY_128_64);
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 Adafruit_Si4713 tx(TX_RST_PIN);
 
@@ -28,6 +30,12 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println("setup...");
+
+    display.init();
+    display.setFont(ArialMT_Plain_24);
+    display.setTextAlignment(TEXT_ALIGN_CENTER);
+    display.drawString(64, 16, "AIMAI");
+    display.display();
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
