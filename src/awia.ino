@@ -1,6 +1,8 @@
 #include "awia.h"
 #include <SparkFunSi4703.h>
 #include <Adafruit_Si4713.h>
+#include <esp32-hal-timer.h>
+#include <esp_attr.h>
 
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 Adafruit_Si4713 tx(TX_RST_PIN);
@@ -12,7 +14,15 @@ volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the no
 volatile bool rxShouldInit = true;
 volatile bool txShouldInit = true;
 
+hw_timer_t *tickRDSReadingTimer = nullptr;
+volatile bool shouldRDSRead = false;
+char rdsBuff[RDS_TEXT_LENGTH]; // thi param is used by both of the state (i.e. rx and tx)
+
 void (*concreteLoop)();
+
+void IRAM_ATTR tickRDSReading() {
+    shouldRDSRead = true;
+}
 
 void setup() {
     Serial.begin(115200);
@@ -52,14 +62,18 @@ void initRx() {
     rx.setChannel(0);
     rx.setVolume(0);
 
+    tickRDSReadingTimer = timerBegin(0, 80, true);
+    timerAttachInterrupt(tickRDSReadingTimer, &tickRDSReading, true);
+    timerAlarmWrite(tickRDSReadingTimer, RDS_READING_PERIOD_MICROS, true);
+    timerAlarmEnable(tickRDSReadingTimer);
+
     rxShouldInit = true;
 }
 
-#define RDS_TEXT_LENGTH 20
 // TODO
-char rdsText[RDS_TEXT_LENGTH] = {'(', 'e', 'm', 'p', 't', 'y', ')', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
-char rdsBuff[RDS_TEXT_LENGTH];
-volatile int rdsBuffCursor = 0;
+char txRDSText[RDS_TEXT_LENGTH] = {'(', 'e', 'm', 'p', 't', 'y', ')', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+                                   ' ', ' ', ' '};
+volatile int txRDSBuffCursor = 0;
 
 void initTx() {
     detachInterrupt(RIGHT_ENC_PIN_A);
@@ -83,7 +97,7 @@ void initTx() {
     // TODO
     tx.beginRDS();
     tx.setRDSstation(STATION_NAME);
-    tx.setRDSbuffer(rdsText);
+    tx.setRDSbuffer(txRDSText);
 
     txShouldInit = true;
 }
@@ -91,7 +105,7 @@ void initTx() {
 int mainLoopRxFreq = 0;
 int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
-volatile bool rdsTextChanged = false;
+volatile bool txRDSTextChanged = false;
 
 void rxLoop() {
     if (rxShouldInit) {
@@ -100,6 +114,7 @@ void rxLoop() {
         // TODO read from nonvolatile memory
         rx.setChannel(800);
         rx.setVolume(1);
+        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
     }
 
     if (mainLoopRxFreq != rxFreq) {
@@ -112,7 +127,10 @@ void rxLoop() {
         mainLoopRxVol = rxVol;
     }
 
-    // FIXME implement RDS Rx
+    if (shouldRDSRead) {
+        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+        shouldRDSRead = false;
+    }
 }
 
 void txLoop() {
@@ -130,9 +148,9 @@ void txLoop() {
         mainLoopTxFreq = txFreq;
     }
 
-    if (rdsTextChanged) {
-        tx.setRDSbuffer(rdsText);
-        rdsTextChanged = false;
+    if (txRDSTextChanged) {
+        tx.setRDSbuffer(txRDSText);
+        txRDSTextChanged = false;
     }
 }
 
@@ -207,7 +225,7 @@ volatile bool rdsEditing = false;
 void editRDSText() {
     if (!rdsEditing) {
         rdsEditing = true;
-        rdsBuffCursor = 0;
+        txRDSBuffCursor = 0;
     }
 
     EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForTextInput, &textInputCursor);
@@ -227,13 +245,13 @@ void enterRDSTextCharacter() {
     }
     Serial.print("char: ");
     Serial.println(runes[textInputCursor]);
-    rdsBuff[rdsBuffCursor++] = runes[textInputCursor];
-    if (rdsBuffCursor >= RDS_TEXT_LENGTH) {
+    rdsBuff[txRDSBuffCursor++] = runes[textInputCursor];
+    if (txRDSBuffCursor >= RDS_TEXT_LENGTH) {
         escapeRDSTextEditing();
-        memcpy(rdsText, rdsBuff, RDS_TEXT_LENGTH);
+        memcpy(txRDSText, rdsBuff, RDS_TEXT_LENGTH);
         Serial.print("RDS Text: ");
-        Serial.println(rdsText);
-        rdsTextChanged = true;
+        Serial.println(txRDSText);
+        txRDSTextChanged = true;
     }
 }
 
@@ -294,6 +312,8 @@ void inactivateRx() {
     digitalWrite(RX_RST_PIN, LOW);
     delay(10);
     digitalWrite(RX_RST_PIN, HIGH);
+
+    timerAlarmDisable(tickRDSReadingTimer);
 }
 
 void inactivateTx() {
