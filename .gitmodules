@@ -4,3 +4,6 @@
 [submodule "Adafruit_SSD1306"]
 	path = Adafruit_SSD1306
 	url = git@github.com:moznion/Adafruit_SSD1306.git
+[submodule "Adafruit-Si4713-Library"]
+	path = Adafruit-Si4713-Library
+	url = git@github.com:moznion/Adafruit-Si4713-Library.git
