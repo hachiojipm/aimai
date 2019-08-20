@@ -3,9 +3,14 @@
 #include <Adafruit_Si4713.h>
 #include <esp32-hal-timer.h>
 #include <esp_attr.h>
-#include <SSD1306.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
 
-SSD1306 display(OLED_ADDR, SDA_PIN, SCL_PIN, GEOMETRY_128_64);
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
+
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 Adafruit_Si4713 tx(TX_RST_PIN);
 
@@ -31,10 +36,11 @@ void setup() {
     while (!Serial);
     Serial.println("setup...");
 
-    display.init();
-    display.setFont(ArialMT_Plain_24);
-    display.setTextAlignment(TEXT_ALIGN_CENTER);
-    display.drawString(64, 16, "AIMAI");
+    display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.println("AIMAI");
     display.display();
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
@@ -70,10 +76,10 @@ void initRx() {
     rx.setChannel(0);
     rx.setVolume(0);
 
-    tickRDSReadingTimer = timerBegin(0, 80, true);
-    timerAttachInterrupt(tickRDSReadingTimer, &tickRDSReading, true);
-    timerAlarmWrite(tickRDSReadingTimer, RDS_READING_PERIOD_MICROS, true);
-    timerAlarmEnable(tickRDSReadingTimer);
+//    tickRDSReadingTimer = timerBegin(0, 80, true);
+//    timerAttachInterrupt(tickRDSReadingTimer, &tickRDSReading, true);
+//    timerAlarmWrite(tickRDSReadingTimer, RDS_READING_PERIOD_MICROS, true);
+//    timerAlarmEnable(tickRDSReadingTimer);
 
     rxShouldInit = true;
 }
@@ -120,9 +126,13 @@ void rxLoop() {
         rxShouldInit = false;
 
         // TODO read from nonvolatile memory
-        rx.setChannel(800);
-        rx.setVolume(1);
-        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+        rxFreq = 807;
+        mainLoopRxFreq = rxFreq;
+        rx.setChannel(mainLoopRxFreq);
+        rxVol = 3;
+        mainLoopRxVol = mainLoopRxVol;
+        rx.setVolume(mainLoopRxVol);
+//        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
     }
 
     if (mainLoopRxFreq != rxFreq) {
@@ -135,10 +145,10 @@ void rxLoop() {
         mainLoopRxVol = rxVol;
     }
 
-    if (shouldRDSRead) {
-        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
-        shouldRDSRead = false;
-    }
+//    if (shouldRDSRead) {
+//        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+//        shouldRDSRead = false;
+//    }
 }
 
 void txLoop() {
@@ -197,7 +207,7 @@ void changeRxFreq() {
         double f = rxFreq / 10.0;
         Serial.print("rx freq: ");
         Serial.print(f);
-        Serial.print("MHz");
+        Serial.println("MHz");
     }
 }
 
@@ -214,7 +224,7 @@ void changeTxFreq() {
         double f = txFreq / 10.0;
         Serial.print("tx freq: ");
         Serial.print(f);
-        Serial.print("MHz");
+        Serial.println("MHz");
     }
 }
 
