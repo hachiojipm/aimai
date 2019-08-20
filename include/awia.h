@@ -12,8 +12,8 @@
 #define RX_RST_PIN 17
 #define TX_RST_PIN 16
 
-#define RX_MODE_PIN 32
-#define TX_MODE_PIN 33
+#define RX_MODE_PIN 33
+#define TX_MODE_PIN 32
 
 #define LEFT_ENC_SW_PIN 23
 #define LEFT_ENC_PIN_A 18
