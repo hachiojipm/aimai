@@ -1,16 +1,13 @@
 #include "awia.h"
 #include <SparkFunSi4703.h>
 #include <Adafruit_Si4713.h>
-#include <esp32-hal-timer.h>
 #include <esp_attr.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
-
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+#include <esp32-hal-log.h>
+#include <freertos/task.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
-
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
 Adafruit_Si4713 tx(TX_RST_PIN);
 
@@ -21,15 +18,8 @@ volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the no
 volatile bool rxShouldInit = true;
 volatile bool txShouldInit = true;
 
-hw_timer_t *tickRDSReadingTimer = nullptr;
-volatile bool shouldRDSRead = false;
+xTaskHandle xReadRDSTaskHandler;
 char rdsBuff[RDS_TEXT_LENGTH]; // thi param is used by both of the state (i.e. rx and tx)
-
-void (*concreteLoop)();
-
-void IRAM_ATTR tickRDSReading() {
-    shouldRDSRead = true;
-}
 
 void setup() {
     Serial.begin(115200);
@@ -58,6 +48,7 @@ void setup() {
     detachInterrupt(TX_MODE_PIN);
     attachInterrupt(TX_MODE_PIN, loadActionMode, CHANGE);
 
+    xTaskCreatePinnedToCore(readRDSPeriodically, TASK_READ_RDS_PERIODICALLY, 4096, NULL, READ_RDS_TASK_PRIORITY, &xReadRDSTaskHandler, READ_RDS_TASK_CPU_NO);
     loadActionMode();
 }
 
@@ -76,10 +67,7 @@ void initRx() {
     rx.setChannel(0);
     rx.setVolume(0);
 
-//    tickRDSReadingTimer = timerBegin(0, 80, true);
-//    timerAttachInterrupt(tickRDSReadingTimer, &tickRDSReading, true);
-//    timerAlarmWrite(tickRDSReadingTimer, RDS_READING_PERIOD_MICROS, true);
-//    timerAlarmEnable(tickRDSReadingTimer);
+    vTaskResume(xReadRDSTaskHandler);
 
     rxShouldInit = true;
 }
@@ -121,63 +109,70 @@ int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
 volatile bool txRDSTextChanged = false;
 
-void rxLoop() {
-    if (rxShouldInit) {
-        rxShouldInit = false;
+void rxLoop(void *arg) {
+    while (true) {
+        if (rxShouldInit) {
+            rxShouldInit = false;
 
-        // TODO read from nonvolatile memory
-        rxFreq = 807;
-        mainLoopRxFreq = rxFreq;
-        rx.setChannel(mainLoopRxFreq);
-        rxVol = 3;
-        mainLoopRxVol = mainLoopRxVol;
-        rx.setVolume(mainLoopRxVol);
-//        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
-    }
+            // TODO read from nonvolatile memory
+            rxFreq = 888;
+            mainLoopRxFreq = rxFreq;
+            rx.setChannel(mainLoopRxFreq);
+            rxVol = 3;
+            mainLoopRxVol = mainLoopRxVol;
+            rx.setVolume(mainLoopRxVol);
+        }
 
-    if (mainLoopRxFreq != rxFreq) {
-        rx.setChannel(rxFreq);
-        mainLoopRxFreq = rxFreq;
-    }
+        if (mainLoopRxFreq != rxFreq) {
+            rx.setChannel(rxFreq);
+            mainLoopRxFreq = rxFreq;
+        }
 
-    if (mainLoopRxVol != rxVol) {
-        rx.setVolume(rxVol);
-        mainLoopRxVol = rxVol;
-    }
-
-//    if (shouldRDSRead) {
-//        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
-//        shouldRDSRead = false;
-//    }
-}
-
-void txLoop() {
-    if (txShouldInit) {
-        txShouldInit = false;
-
-        // TODO read from nonvolatile memory
-        txFreq = JP_MINIMUM_FM_MHZ;
-        mainLoopTxFreq = txFreq;
-        tx.tuneFM(txFreq * 10);
-    }
-
-    if (mainLoopTxFreq != txFreq) {
-        tx.tuneFM(txFreq * 10);
-        mainLoopTxFreq = txFreq;
-    }
-
-    if (txRDSTextChanged) {
-        tx.setRDSbuffer(txRDSText);
-        txRDSTextChanged = false;
+        if (mainLoopRxVol != rxVol) {
+            rx.setVolume(rxVol);
+            mainLoopRxVol = rxVol;
+        }
     }
 }
 
-void nopLoop() {
+void txLoop(void *arg) {
+    while (true) {
+        if (txShouldInit) {
+            txShouldInit = false;
+
+            // TODO read from nonvolatile memory
+            txFreq = JP_MINIMUM_FM_MHZ;
+            mainLoopTxFreq = txFreq;
+            tx.tuneFM(txFreq * 10);
+        }
+
+        if (mainLoopTxFreq != txFreq) {
+            tx.tuneFM(txFreq * 10);
+            mainLoopTxFreq = txFreq;
+        }
+
+        if (txRDSTextChanged) {
+            tx.setRDSbuffer(txRDSText);
+            txRDSTextChanged = false;
+        }
+    }
 }
 
-void loop() {
-    (*concreteLoop)();
+void nopLoop(void *arg) {
+    while (true) {
+    }
 }
+
+void readRDSPeriodically(void *arg) {
+    delay(1000);
+    while (true) {
+        Serial.println("RDS read");
+        rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+        Serial.println(rdsBuff);
+        delay(RDS_READING_PERIOD_MILLIS);
+    }
+}
+
 
 volatile byte posForRxVol;
 
@@ -331,7 +326,7 @@ void inactivateRx() {
     delay(10);
     digitalWrite(RX_RST_PIN, HIGH);
 
-    timerAlarmDisable(tickRDSReadingTimer);
+    vTaskSuspend(xReadRDSTaskHandler);
 }
 
 void inactivateTx() {
@@ -345,7 +340,7 @@ void loadActionMode() {
         Serial.println("TX mode");
         inactivateRx();
         initTx();
-        concreteLoop = txLoop;
+        xTaskCreatePinnedToCore(txLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);
         return;
     }
 
@@ -353,7 +348,7 @@ void loadActionMode() {
         Serial.println("RX mode");
         inactivateTx();
         initRx();
-        concreteLoop = rxLoop;
+        xTaskCreatePinnedToCore(rxLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);
         return;
     }
 
@@ -361,5 +356,9 @@ void loadActionMode() {
     Serial.println("NOP mode");
     inactivateTx();
     inactivateRx();
-    concreteLoop = nopLoop;
+    xTaskCreatePinnedToCore(nopLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);
 }
+
+void loop() {
+}
+

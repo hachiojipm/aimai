@@ -26,10 +26,19 @@
 #define JP_MAXIMUM_FM_MHZ 949
 #define TX_POWER 115
 #define RDS_TEXT_LENGTH 20
-#define RDS_READING_TIMEOUT_MILLIS 10000
-#define RDS_READING_PERIOD_MICROS 15000000
+#define RDS_READING_TIMEOUT_MILLIS 3000
+#define RDS_READING_PERIOD_MILLIS 15000
 
 #define OLED_ADDR 0x3c
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define MAIN_TASK_CPU_NO 1
+#define READ_RDS_TASK_CPU_NO 0
+#define MAIN_TASK_PRIORITY 1 | portPRIVILEGE_BIT
+#define READ_RDS_TASK_PRIORITY 2 | portPRIVILEGE_BIT
+#define TASK_READ_RDS_PERIODICALLY "read_rds_periodically"
+#define TASK_MAIN "main"
 
 enum EncSide {
     LEFT,
@@ -49,9 +58,10 @@ void escapeRDSTextEditing();
 void changeRxVolume();
 void changeRxFreq();
 void changeTxFreq();
-void txLoop();
-void rxLoop();
-void nopLoop();
+void txLoop(void *arg);
+void rxLoop(void *arg);
+void nopLoop(void *arg);
+void readRDSPeriodically(void *arg);
 void loadActionMode();
 EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte* pos, volatile int16_t* cnt);
 
