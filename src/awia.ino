@@ -6,7 +6,6 @@
 #include <Wire.h>
 #include <esp32-hal-log.h>
 #include <freertos/task.h>
-#include <Fonts/FreeMonoBoldOblique12pt7b.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
@@ -54,9 +53,9 @@ static const unsigned char PROGMEM logo_bmp[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-void drawLogo(void) {
+void displayLogo() {
     display.clearDisplay();
-    display.drawBitmap(0, 0, logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+    display.drawBitmap(0, 0, logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, WHITE);
     display.display();
     delay(1000);
 }
@@ -64,13 +63,32 @@ void drawLogo(void) {
 xTaskHandle xReadRDSTaskHandler;
 char rdsBuff[RDS_TEXT_LENGTH]; // thi param is used by both of the state (i.e. rx and tx)
 
+void displayRXFreq(int rxFreq) {
+    double f = rxFreq / 10.0;
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 8);
+    display.printf("RX %.1fMHz", f);
+    display.display();
+}
+
+void displayVol(int vol) {
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(25, 8);
+    display.printf("Vol %2d", vol);
+    display.display();
+}
+
 void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println("setup...");
 
-    display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
-    drawLogo();
+    while (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR));
+    displayLogo();
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
@@ -159,18 +177,20 @@ void rxLoop(void *arg) {
             mainLoopRxFreq = rxFreq;
             rx.setChannel(mainLoopRxFreq);
             rxVol = 3;
-            mainLoopRxVol = mainLoopRxVol;
+            mainLoopRxVol = rxVol;
             rx.setVolume(mainLoopRxVol);
         }
 
         if (mainLoopRxFreq != rxFreq) {
             rx.setChannel(rxFreq);
             mainLoopRxFreq = rxFreq;
+            displayRXFreq(rxFreq);
         }
 
         if (mainLoopRxVol != rxVol) {
             rx.setVolume(rxVol);
             mainLoopRxVol = rxVol;
+            displayVol(rxVol);
         }
     }
 }
