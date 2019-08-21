@@ -16,9 +16,6 @@ volatile int16_t rxVol = 0; // TODO load init value from the nonvolatile memory
 volatile int16_t rxFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the nonvolatile memory
 
-volatile bool rxShouldInit = true;
-volatile bool txShouldInit = true;
-
 static const unsigned char PROGMEM logo_bmp[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -127,8 +124,6 @@ void initRx() {
     rx.setVolume(0);
 
     vTaskResume(xReadRDSTaskHandler);
-
-    rxShouldInit = true;
 }
 
 // TODO
@@ -159,8 +154,6 @@ void initTx() {
     tx.beginRDS();
     tx.setRDSstation(STATION_NAME);
     tx.setRDSbuffer(txRDSText);
-
-    txShouldInit = true;
 }
 
 int mainLoopRxFreq = 0;
@@ -168,32 +161,27 @@ int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
 volatile bool txRDSTextChanged = false;
 
-hw_timer_t *rxRDSDisplayTicker = nullptr;
 volatile bool doDisplayRXRDS = false;
-
 void tickRXRDSDisplay() {
     doDisplayRXRDS = true;
 }
 
 void rxLoop(void *arg) {
+    // TODO read from nonvolatile memory
+    rxFreq = 888;
+    mainLoopRxFreq = rxFreq;
+    rx.setChannel(mainLoopRxFreq);
+    rxVol = 3;
+    mainLoopRxVol = rxVol;
+    rx.setVolume(mainLoopRxVol);
+
+    hw_timer_t *rxRDSDisplayTicker = nullptr;
+    rxRDSDisplayTicker = timerBegin(0, 80, true);
+    timerAttachInterrupt(rxRDSDisplayTicker, &tickRXRDSDisplay, true);
+    timerAlarmWrite(rxRDSDisplayTicker, 1000000, true);
+    timerAlarmEnable(rxRDSDisplayTicker);
+
     while (true) {
-        if (rxShouldInit) {
-            rxShouldInit = false;
-
-            // TODO read from nonvolatile memory
-            rxFreq = 888;
-            mainLoopRxFreq = rxFreq;
-            rx.setChannel(mainLoopRxFreq);
-            rxVol = 3;
-            mainLoopRxVol = rxVol;
-            rx.setVolume(mainLoopRxVol);
-
-            rxRDSDisplayTicker = timerBegin(0, 80, true);
-            timerAttachInterrupt(rxRDSDisplayTicker, &tickRXRDSDisplay, true);
-            timerAlarmWrite(rxRDSDisplayTicker, 1000000, true);
-            timerAlarmEnable(rxRDSDisplayTicker);
-        }
-
         bool isDisplayedRXCtrl = false;
         if (mainLoopRxFreq != rxFreq) {
             rx.setChannel(rxFreq);
@@ -226,16 +214,12 @@ void rxLoop(void *arg) {
 }
 
 void txLoop(void *arg) {
+    // TODO read from nonvolatile memory
+    txFreq = JP_MINIMUM_FM_MHZ;
+    mainLoopTxFreq = txFreq;
+    tx.tuneFM(txFreq * 10);
+
     while (true) {
-        if (txShouldInit) {
-            txShouldInit = false;
-
-            // TODO read from nonvolatile memory
-            txFreq = JP_MINIMUM_FM_MHZ;
-            mainLoopTxFreq = txFreq;
-            tx.tuneFM(txFreq * 10);
-        }
-
         if (mainLoopTxFreq != txFreq) {
             tx.tuneFM(txFreq * 10);
             mainLoopTxFreq = txFreq;
