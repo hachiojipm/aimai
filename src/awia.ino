@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <esp32-hal-log.h>
 #include <freertos/task.h>
+#include <Fonts/FreeMonoBoldOblique12pt7b.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
@@ -53,7 +54,7 @@ static const unsigned char PROGMEM logo_bmp[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-void testdrawbitmap(void) {
+void drawLogo(void) {
     display.clearDisplay();
     display.drawBitmap(0, 0, logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
     display.display();
@@ -69,7 +70,7 @@ void setup() {
     Serial.println("setup...");
 
     display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
-    testdrawbitmap();
+    drawLogo();
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
