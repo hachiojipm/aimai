@@ -32,6 +32,8 @@
 #define OLED_ADDR 0x3c
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
+#define LOGO_WIDTH 128
+#define LOGO_HEIGHT 32
 
 #define MAIN_TASK_CPU_NO 1
 #define READ_RDS_TASK_CPU_NO 0
