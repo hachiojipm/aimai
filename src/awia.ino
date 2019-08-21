@@ -156,9 +156,6 @@ void initTx() {
     tx.setRDSbuffer(txRDSText);
 }
 
-int mainLoopRxFreq = 0;
-int mainLoopRxVol = 0;
-int mainLoopTxFreq = 0;
 volatile bool txRDSTextChanged = false;
 
 volatile bool doDisplayRXRDS = false;
@@ -169,10 +166,10 @@ void tickRXRDSDisplay() {
 void rxLoop(void *arg) {
     // TODO read from nonvolatile memory
     rxFreq = 888;
-    mainLoopRxFreq = rxFreq;
+    int mainLoopRxFreq = rxFreq;
     rx.setChannel(mainLoopRxFreq);
     rxVol = 3;
-    mainLoopRxVol = rxVol;
+    int mainLoopRxVol = rxVol;
     rx.setVolume(mainLoopRxVol);
 
     hw_timer_t *rxRDSDisplayTicker = nullptr;
@@ -216,7 +213,7 @@ void rxLoop(void *arg) {
 void txLoop(void *arg) {
     // TODO read from nonvolatile memory
     txFreq = JP_MINIMUM_FM_MHZ;
-    mainLoopTxFreq = txFreq;
+    int mainLoopTxFreq = txFreq;
     tx.tuneFM(txFreq * 10);
 
     while (true) {
