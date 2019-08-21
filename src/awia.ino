@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <esp32-hal-log.h>
 #include <freertos/task.h>
+#include <esp32-hal-timer.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
@@ -167,6 +168,13 @@ int mainLoopRxVol = 0;
 int mainLoopTxFreq = 0;
 volatile bool txRDSTextChanged = false;
 
+hw_timer_t *rxRDSDisplayTicker = nullptr;
+volatile bool doDisplayRXRDS = false;
+
+void tickRXRDSDisplay() {
+    doDisplayRXRDS = true;
+}
+
 void rxLoop(void *arg) {
     while (true) {
         if (rxShouldInit) {
@@ -179,18 +187,40 @@ void rxLoop(void *arg) {
             rxVol = 3;
             mainLoopRxVol = rxVol;
             rx.setVolume(mainLoopRxVol);
+
+            rxRDSDisplayTicker = timerBegin(0, 80, true);
+            timerAttachInterrupt(rxRDSDisplayTicker, &tickRXRDSDisplay, true);
+            timerAlarmWrite(rxRDSDisplayTicker, 1000000, true);
+            timerAlarmEnable(rxRDSDisplayTicker);
         }
 
+        bool isDisplayedRXCtrl = false;
         if (mainLoopRxFreq != rxFreq) {
             rx.setChannel(rxFreq);
             mainLoopRxFreq = rxFreq;
             displayRXFreq(rxFreq);
+            isDisplayedRXCtrl = true;
         }
 
         if (mainLoopRxVol != rxVol) {
             rx.setVolume(rxVol);
             mainLoopRxVol = rxVol;
             displayVol(rxVol);
+            isDisplayedRXCtrl = true;
+        }
+
+        if (isDisplayedRXCtrl) {
+            doDisplayRXRDS = false;
+            timerEnd(rxRDSDisplayTicker);
+            rxRDSDisplayTicker = timerBegin(0, 80, true);
+            timerAttachInterrupt(rxRDSDisplayTicker, &tickRXRDSDisplay, true);
+            timerAlarmWrite(rxRDSDisplayTicker, 300000, true);
+            timerAlarmEnable(rxRDSDisplayTicker);
+        }
+
+        if (doDisplayRXRDS) {
+            display.clearDisplay();
+            display.display();
         }
     }
 }
