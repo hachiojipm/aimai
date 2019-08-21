@@ -178,6 +178,8 @@ void rxLoop(void *arg) {
     timerAlarmWrite(rxRDSDisplayTicker, 1000000, true);
     timerAlarmEnable(rxRDSDisplayTicker);
 
+    int rxRDSTextOffset = 0;
+
     while (true) {
         bool isDisplayedRXCtrl = false;
         if (mainLoopRxFreq != rxFreq) {
@@ -205,7 +207,35 @@ void rxLoop(void *arg) {
 
         if (doDisplayRXRDS) {
             display.clearDisplay();
+
+            display.setTextSize(2);
+            display.setTextColor(WHITE);
+            display.setCursor(0, 8);
+            display.setTextWrap(false);
+
+            char rdsShowBuff[RDS_TEXT_LENGTH];
+            for (int i = 0; i < RDS_TEXT_LENGTH; i++) {
+                int cursor = i+rxRDSTextOffset;
+                if (cursor >= RDS_TEXT_LENGTH) {
+                    cursor -= RDS_TEXT_LENGTH;
+                }
+                rdsShowBuff[i] = rdsBuff[cursor];
+            }
+
+            display.print(rdsShowBuff);
+
             display.display();
+
+            if (rxRDSTextOffset == 0) {
+                delay(800);
+            }
+
+            rxRDSTextOffset++;
+            if (rxRDSTextOffset >= RDS_TEXT_LENGTH) {
+                rxRDSTextOffset = 0;
+            }
+
+            delay(150);
         }
     }
 }
@@ -239,6 +269,22 @@ void readRDSPeriodically(void *arg) {
     while (true) {
         Serial.println("RDS read");
         rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+        if (rdsBuff[0] == '\0') {
+            rdsBuff[0] = '<';
+            rdsBuff[1] = 'N';
+            rdsBuff[2] = 'O';
+            rdsBuff[3] = ' ';
+            rdsBuff[4] = 'R';
+            rdsBuff[5] = 'D';
+            rdsBuff[6] = 'S';
+            rdsBuff[7] = ' ';
+            rdsBuff[8] = 'D';
+            rdsBuff[9] = 'A';
+            rdsBuff[10] = 'T';
+            rdsBuff[11] = 'A';
+            rdsBuff[12] = '>';
+            rdsBuff[13] = '\0';
+        }
         Serial.println(rdsBuff);
         delay(RDS_READING_PERIOD_MILLIS);
     }
