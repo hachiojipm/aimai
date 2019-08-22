@@ -51,6 +51,8 @@ static const unsigned char PROGMEM logo_bmp[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+volatile bool isRXRDSReading = false;
+
 void displayLogo() {
     display.clearDisplay();
     display.drawBitmap(0, 0, logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, WHITE);
@@ -159,6 +161,7 @@ void initTx() {
 volatile bool txRDSTextChanged = false;
 
 volatile bool doDisplayRXRDS = false;
+
 void tickRXRDSDisplay() {
     doDisplayRXRDS = true;
 }
@@ -205,7 +208,7 @@ void rxLoop(void *arg) {
             timerAlarmEnable(rxRDSDisplayTicker);
         }
 
-        if (doDisplayRXRDS) {
+        if (doDisplayRXRDS && !isRXRDSReading) {
             display.clearDisplay();
 
             display.setTextSize(2);
@@ -213,9 +216,10 @@ void rxLoop(void *arg) {
             display.setCursor(0, 8);
             display.setTextWrap(false);
 
-            char rdsShowBuff[RDS_TEXT_LENGTH];
-            for (int i = 0; i < RDS_TEXT_LENGTH; i++) {
-                int cursor = i+rxRDSTextOffset;
+            int counterOffset = 0;
+            char rdsShowBuff[OLED_TEXT_LEN_BY_ONE_LINE];
+            for (int i = 0; i < OLED_TEXT_LEN_BY_ONE_LINE; i++) {
+                int cursor = i + rxRDSTextOffset - counterOffset;
                 if (cursor >= RDS_TEXT_LENGTH) {
                     cursor -= RDS_TEXT_LENGTH;
                 }
@@ -223,19 +227,14 @@ void rxLoop(void *arg) {
             }
 
             display.print(rdsShowBuff);
-
             display.display();
 
-            if (rxRDSTextOffset == 0) {
-                delay(800);
-            }
+            delay(150);
 
             rxRDSTextOffset++;
             if (rxRDSTextOffset >= RDS_TEXT_LENGTH) {
                 rxRDSTextOffset = 0;
             }
-
-            delay(150);
         }
     }
 }
@@ -264,28 +263,22 @@ void nopLoop(void *arg) {
     }
 }
 
+char defaultRXRDSText[RDS_TEXT_LENGTH] = {
+        '<', 'N', 'O', ' ', 'R', 'D', 'S', ' ', 'D', 'A',
+        'T', 'A', '>', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+};
+
 void readRDSPeriodically(void *arg) {
-    delay(1000);
+    delay(1000); // if this delay doesn't exist, the RX procedure be stuck
     while (true) {
-        Serial.println("RDS read");
+        isRXRDSReading = true;
         rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
         if (rdsBuff[0] == '\0') {
-            rdsBuff[0] = '<';
-            rdsBuff[1] = 'N';
-            rdsBuff[2] = 'O';
-            rdsBuff[3] = ' ';
-            rdsBuff[4] = 'R';
-            rdsBuff[5] = 'D';
-            rdsBuff[6] = 'S';
-            rdsBuff[7] = ' ';
-            rdsBuff[8] = 'D';
-            rdsBuff[9] = 'A';
-            rdsBuff[10] = 'T';
-            rdsBuff[11] = 'A';
-            rdsBuff[12] = '>';
-            rdsBuff[13] = '\0';
+            for (int i = 0; i < RDS_TEXT_LENGTH; i++) {
+                rdsBuff[i] = defaultRXRDSText[i];
+            }
         }
-        Serial.println(rdsBuff);
+        isRXRDSReading = false;
         delay(RDS_READING_PERIOD_MILLIS);
     }
 }
