@@ -30,7 +30,7 @@
 #define OLED_ADDR 0x3c
 #define OLED_TEXT_LEN_BY_ONE_LINE 11
 #define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+#define SCREEN_HEIGHT 32
 #define LOGO_WIDTH 128
 #define LOGO_HEIGHT 32
 
