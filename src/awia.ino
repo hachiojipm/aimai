@@ -20,12 +20,12 @@ volatile int16_t txFreq = JP_MINIMUM_FM_MHZ; // TODO load init value from the no
 volatile bool isRXRDSReading = false;
 
 xTaskHandle xReadRDSTaskHandler;
-char rdsBuff[RDS_TEXT_LENGTH]; // thi param is used by both of the state (i.e. rx and tx)
+char rdsBuff[RDS_TEXT_LENGTH + 1]; // thi param is used by both of the state (i.e. rx and tx)
 
 void setup() {
     Serial.begin(115200);
     while (!Serial);
-    Serial.println("setup...");
+    log_i("setup...");
 
     view.begin();
     view.displayLogo();
@@ -68,9 +68,9 @@ void initRx() {
     vTaskResume(xReadRDSTaskHandler);
 }
 
-// TODO
-char txRDSText[RDS_TEXT_LENGTH] = {'(', 'e', 'm', 'p', 't', 'y', ')', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-                                   ' ', ' ', ' '};
+char txRDSText[RDS_TEXT_LENGTH + 1] = {
+        '(', 'e', 'm', 'p', 't', 'y', ')', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '\0'
+};
 volatile int txRDSBuffCursor = 0;
 
 void initTx() {
@@ -108,7 +108,7 @@ void tickRXRDSDisplay() {
 
 void rxLoop(void *arg) {
     // TODO read from nonvolatile memory
-    rxFreq = 888;
+    rxFreq = 761;
     int mainLoopRxFreq = rxFreq;
     rx.setChannel(mainLoopRxFreq);
     rxVol = 3;
@@ -153,6 +153,17 @@ void rxLoop(void *arg) {
 }
 
 volatile bool rdsTextEntering = false;
+volatile bool rdsEditing = false;
+
+#define RUNES_NUM 44
+char runes[RUNES_NUM] = {
+        ' ',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '-',
+        '_', '@', '(', ')'
+};
+volatile int16_t textInputCursor = 0;
 
 void txLoop(void *arg) {
     // TODO read from nonvolatile memory
@@ -164,7 +175,7 @@ void txLoop(void *arg) {
         if (mainLoopTxFreq != txFreq) {
             tx.tuneFM(txFreq * 10);
             mainLoopTxFreq = txFreq;
-            view.displayRxFreq(txFreq);
+            view.displayTxFreq(txFreq);
         }
 
         if (txRDSTextChanged) {
@@ -177,6 +188,12 @@ void txLoop(void *arg) {
             delay(200);
             rdsTextEntering = false;
         }
+
+        if (rdsEditing) {
+            rdsBuff[txRDSBuffCursor] = runes[textInputCursor];
+            view.displayTxRDSTextForInput(rdsBuff);
+            delay(100);
+        }
     }
 }
 
@@ -185,20 +202,21 @@ void nopLoop(void *arg) {
     }
 }
 
-char defaultRXRDSText[RDS_TEXT_LENGTH] = {
+char defaultRXRDSText[RDS_TEXT_LENGTH + 1] = {
         '<', 'N', 'O', ' ', 'R', 'D', 'S', ' ', 'D', 'A',
         'T', 'A', '>', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+        '\0'
 };
 
 void readRDSPeriodically(void *arg) {
     delay(1000); // if this delay doesn't exist, the RX procedure be stuck
     while (true) {
+        log_d("read RDS");
         isRXRDSReading = true;
         rx.readRDS(rdsBuff, RDS_READING_TIMEOUT_MILLIS);
+        log_d("RDS buff: %s", rdsBuff);
         if (rdsBuff[0] == '\0') {
-            for (int i = 0; i < RDS_TEXT_LENGTH; i++) {
-                rdsBuff[i] = defaultRXRDSText[i];
-            }
+            memcpy(rdsBuff, defaultRXRDSText, RDS_TEXT_LENGTH + 1);
         }
         isRXRDSReading = false;
         delay(RDS_READING_PERIOD_MILLIS);
@@ -248,22 +266,13 @@ void changeTxFreq() {
     }
 }
 
-#define RUNES_NUM 44
-char runes[RUNES_NUM] = {
-        ' ',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-        'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '-',
-        '_', '@', '(', ')'
-};
 volatile byte posForTextInput;
-volatile int16_t textInputCursor = 0;
-volatile bool rdsEditing = false;
 
 void editRDSText() {
     if (!rdsEditing) {
         rdsEditing = true;
         txRDSBuffCursor = 0;
+        memset(rdsBuff, '\0', RDS_TEXT_LENGTH + 1);
     }
 
     EncCountStatus encStatus = _readEncCountStatus(RIGHT, &posForTextInput, &textInputCursor);
@@ -273,7 +282,6 @@ void editRDSText() {
         } else if (encStatus.currentCnt > (RUNES_NUM - 1)) {
             textInputCursor = 0;
         }
-        Serial.println(runes[textInputCursor]);
     }
 }
 
@@ -283,7 +291,8 @@ void enterRDSTextCharacter() {
     }
     rdsTextEntering = true;
     log_d("char: %c", runes[textInputCursor]);
-    rdsBuff[txRDSBuffCursor++] = runes[textInputCursor];
+    rdsBuff[txRDSBuffCursor] = runes[textInputCursor];
+    txRDSBuffCursor++;
     if (txRDSBuffCursor >= RDS_TEXT_LENGTH) {
         memcpy(txRDSText, rdsBuff, RDS_TEXT_LENGTH);
         log_d("RDS text: %s", txRDSText);
@@ -307,8 +316,7 @@ EncCountStatus _readEncCountStatus(EncSide encSide, volatile byte *pos, volatile
             break;
         default:
             // absolutely unreachable
-            Serial.print("[ERROR] unexpected enc side has come: ");
-            Serial.println(encSide);
+            log_e("[ERROR] unexpected enc side has come: %s", encSide);
             return {0, 0};
     }
 
@@ -361,7 +369,7 @@ void loadActionMode() {
     int rx = digitalRead(RX_MODE_PIN);
     int tx = digitalRead(TX_MODE_PIN);
     if (rx == HIGH && tx == LOW) {
-        Serial.println("TX mode");
+        log_i("Tx mode");
         inactivateRx();
         initTx();
         xTaskCreatePinnedToCore(txLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);
@@ -369,7 +377,7 @@ void loadActionMode() {
     }
 
     if (tx == HIGH && rx == LOW) {
-        Serial.println("RX mode");
+        log_i("Rx mode");
         inactivateTx();
         initRx();
         xTaskCreatePinnedToCore(rxLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);
@@ -377,7 +385,7 @@ void loadActionMode() {
     }
 
     // both of the mode pins are 0 or 1, this handles it as NOP mode
-    Serial.println("NOP mode");
+    log_i("NOP mode");
     inactivateTx();
     inactivateRx();
     xTaskCreatePinnedToCore(nopLoop, TASK_MAIN, 4096, NULL, MAIN_TASK_PRIORITY, NULL, MAIN_TASK_CPU_NO);

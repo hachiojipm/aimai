@@ -111,3 +111,23 @@ void View::displayTxFreq(int txFreq) {
     display.printf("Tx %.1fMHz", f);
     display.display();
 }
+
+void View::displayTxRDSTextForInput(const char *rdsBuff) {
+    char *rdsShowBuff = (char *) malloc(sizeof(char) * OLED_TEXT_LEN_BY_ONE_LINE);
+    if (strlen(rdsBuff) >= OLED_TEXT_LEN_BY_ONE_LINE) {
+        strncpy(rdsShowBuff, &rdsBuff[strlen(rdsBuff) - (OLED_TEXT_LEN_BY_ONE_LINE - 1)],
+                OLED_TEXT_LEN_BY_ONE_LINE - 1);
+    } else {
+        strcpy(rdsShowBuff, rdsBuff);
+    }
+
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 8);
+    display.setTextWrap(false);
+    display.printf(rdsShowBuff);
+    display.display();
+
+    free(rdsShowBuff);
+}

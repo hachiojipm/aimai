@@ -21,6 +21,7 @@ public:
 
     // Tx
     void displayTxFreq(int txFreq);
+    void displayTxRDSTextForInput(const char *rdsBuff);
 
 private:
     uint8_t rxRDSTextOffset;
