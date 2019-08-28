@@ -208,8 +208,7 @@ void changeRxVolume() {
         } else if (encStatus.currentCnt > 15) {
             rxVol = 15;
         }
-        Serial.print("rx vol: ");
-        Serial.println(rxVol);
+        log_d("Rx vol: %d", rxVol);
     }
 }
 
@@ -223,10 +222,7 @@ void changeRxFreq() {
         } else if (encStatus.currentCnt > JP_MAXIMUM_FM_MHZ) {
             rxFreq = JP_MINIMUM_FM_MHZ;
         }
-        double f = rxFreq / 10.0;
-        Serial.print("rx freq: ");
-        Serial.print(f);
-        Serial.println("MHz");
+        log_d("Rx freq: %fMHz", rxFreq / 10.0);
     }
 }
 
@@ -240,10 +236,7 @@ void changeTxFreq() {
         } else if (encStatus.currentCnt > JP_MAXIMUM_FM_MHZ) {
             txFreq = JP_MINIMUM_FM_MHZ;
         }
-        double f = txFreq / 10.0;
-        Serial.print("tx freq: ");
-        Serial.print(f);
-        Serial.println("MHz");
+        log_d("Tx freq: %fMHz", txFreq / 10.0);
     }
 }
 
