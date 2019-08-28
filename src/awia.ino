@@ -152,6 +152,8 @@ void rxLoop(void *arg) {
     }
 }
 
+volatile bool rdsTextEntering = false;
+
 void txLoop(void *arg) {
     // TODO read from nonvolatile memory
     txFreq = JP_MINIMUM_FM_MHZ;
@@ -168,6 +170,12 @@ void txLoop(void *arg) {
         if (txRDSTextChanged) {
             tx.setRDSbuffer(txRDSText);
             txRDSTextChanged = false;
+        }
+
+        // workaround for avoiding chattering
+        if (rdsTextEntering) {
+            delay(200);
+            rdsTextEntering = false;
         }
     }
 }
@@ -270,18 +278,17 @@ void editRDSText() {
 }
 
 void enterRDSTextCharacter() {
-    if (!rdsEditing) {
+    if (rdsTextEntering || !rdsEditing) {
         return;
     }
-    Serial.print("char: ");
-    Serial.println(runes[textInputCursor]);
+    rdsTextEntering = true;
+    log_d("char: %c", runes[textInputCursor]);
     rdsBuff[txRDSBuffCursor++] = runes[textInputCursor];
     if (txRDSBuffCursor >= RDS_TEXT_LENGTH) {
-        escapeRDSTextEditing();
         memcpy(txRDSText, rdsBuff, RDS_TEXT_LENGTH);
-        Serial.print("RDS Text: ");
-        Serial.println(txRDSText);
+        log_d("RDS text: %s", txRDSText);
         txRDSTextChanged = true;
+        escapeRDSTextEditing();
     }
 }
 
