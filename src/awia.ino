@@ -126,7 +126,7 @@ void rxLoop(void *arg) {
         if (mainLoopRxFreq != rxFreq) {
             rx.setChannel(rxFreq);
             mainLoopRxFreq = rxFreq;
-            view.displayRXFreq(rxFreq);
+            view.displayRxFreq(rxFreq);
             isDisplayedRXCtrl = true;
         }
 
@@ -147,7 +147,7 @@ void rxLoop(void *arg) {
         }
 
         if (doDisplayRXRDS && !isRXRDSReading) {
-            view.displayRXRDSTextAsMarquee(rdsBuff);
+            view.displayRxRDSTextAsMarquee(rdsBuff);
         }
     }
 }
@@ -162,6 +162,7 @@ void txLoop(void *arg) {
         if (mainLoopTxFreq != txFreq) {
             tx.tuneFM(txFreq * 10);
             mainLoopTxFreq = txFreq;
+            view.displayRxFreq(txFreq);
         }
 
         if (txRDSTextChanged) {

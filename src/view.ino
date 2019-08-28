@@ -60,17 +60,17 @@ void View::displayVol(int vol) {
     display.display();
 }
 
-void View::displayRXFreq(int rxFreq) {
+void View::displayRxFreq(int rxFreq) {
     double f = rxFreq / 10.0;
     display.clearDisplay();
     display.setTextSize(2);
     display.setTextColor(WHITE);
     display.setCursor(0, 8);
-    display.printf("RX %.1fMHz", f);
+    display.printf("Rx %.1fMHz", f);
     display.display();
 }
 
-void View::displayRXRDSTextAsMarquee(const char rdsBuff[RDS_TEXT_LENGTH]) {
+void View::displayRxRDSTextAsMarquee(const char *rdsBuff) {
     display.clearDisplay();
 
     display.setTextSize(2);
@@ -93,11 +93,21 @@ void View::displayRXRDSTextAsMarquee(const char rdsBuff[RDS_TEXT_LENGTH]) {
 
     delay(150);
 
-    incrementRXRDSTextOffset();
+    incrementRxRDSTextOffset();
 }
 
-void View::incrementRXRDSTextOffset() {
+void View::incrementRxRDSTextOffset() {
     if (++rxRDSTextOffset >= RDS_TEXT_LENGTH) {
         rxRDSTextOffset = 0;
     }
+}
+
+void View::displayTxFreq(int txFreq) {
+    double f = txFreq / 10.0;
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 8);
+    display.printf("Tx %.1fMHz", f);
+    display.display();
 }

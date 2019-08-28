@@ -14,15 +14,18 @@ public:
 
     void displayLogo();
 
-    // RX
+    // Rx
     void displayVol(int vol);
-    void displayRXFreq(int rxFreq);
-    void displayRXRDSTextAsMarquee(const char rdsBuff[RDS_TEXT_LENGTH]);
+    void displayRxFreq(int rxFreq);
+    void displayRxRDSTextAsMarquee(const char *rdsBuff);
+
+    // Tx
+    void displayTxFreq(int txFreq);
 
 private:
     uint8_t rxRDSTextOffset;
     Adafruit_SSD1306 display;
-    void incrementRXRDSTextOffset();
+    void incrementRxRDSTextOffset();
 };
 
 #endif //_AWIA_VIEW_INC_GUARD_H_
