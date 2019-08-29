@@ -144,6 +144,7 @@ void rxLoop(void *arg) {
             timerAttachInterrupt(rxRDSDisplayTicker, &tickRXRDSDisplay, true);
             timerAlarmWrite(rxRDSDisplayTicker, 300000, true);
             timerAlarmEnable(rxRDSDisplayTicker);
+            delay(50);
         }
 
         if (doDisplayRXRDS && !isRXRDSReading) {
@@ -176,6 +177,7 @@ void txLoop(void *arg) {
             tx.tuneFM(txFreq * 10);
             mainLoopTxFreq = txFreq;
             view.displayTxFreq(txFreq);
+            delay(50);
         }
 
         if (txRDSTextChanged) {
