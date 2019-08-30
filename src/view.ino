@@ -3,6 +3,7 @@
 View::View() {
     display = Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
     rxRDSTextOffset = 0;
+    txRDSTextOffset = 0;
 }
 
 void View::begin() {
@@ -71,28 +72,7 @@ void View::displayRxFreq(int rxFreq) {
 }
 
 void View::displayRxRDSTextAsMarquee(const char *rdsBuff) {
-    display.clearDisplay();
-
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 8);
-    display.setTextWrap(false);
-
-    int counterOffset = 0;
-    char rdsShowBuff[OLED_TEXT_LEN_BY_ONE_LINE];
-    for (int i = 0; i < OLED_TEXT_LEN_BY_ONE_LINE; i++) {
-        int cursor = i + rxRDSTextOffset - counterOffset;
-        if (cursor >= RDS_TEXT_LENGTH) {
-            cursor -= RDS_TEXT_LENGTH;
-        }
-        rdsShowBuff[i] = rdsBuff[cursor];
-    }
-
-    display.print(rdsShowBuff);
-    display.display();
-
-    delay(150);
-
+    displayRDSTextAsMarquee(rxRDSTextOffset, rdsBuff);
     incrementRxRDSTextOffset();
 }
 
@@ -130,4 +110,39 @@ void View::displayTxRDSTextForInput(const char *rdsBuff) {
     display.display();
 
     free(rdsShowBuff);
+}
+
+void View::displayTxRDSTextAsMarquee(const char *rdsBuff) {
+    displayRDSTextAsMarquee(txRDSTextOffset, rdsBuff);
+    incrementTxRDSTextOffset();
+}
+
+void View::incrementTxRDSTextOffset() {
+    if (++txRDSTextOffset >= RDS_TEXT_LENGTH) {
+        txRDSTextOffset = 0;
+    }
+}
+
+void View::displayRDSTextAsMarquee(int offset, const char *rdsBuff) {
+    display.clearDisplay();
+
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 8);
+    display.setTextWrap(false);
+
+    int counterOffset = 0;
+    char rdsShowBuff[OLED_TEXT_LEN_BY_ONE_LINE];
+    for (int i = 0; i < OLED_TEXT_LEN_BY_ONE_LINE; i++) {
+        int cursor = i + offset - counterOffset;
+        if (cursor >= RDS_TEXT_LENGTH) {
+            cursor -= RDS_TEXT_LENGTH;
+        }
+        rdsShowBuff[i] = rdsBuff[cursor];
+    }
+
+    display.print(rdsShowBuff);
+    display.display();
+
+    delay(150);
 }

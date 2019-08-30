@@ -166,17 +166,36 @@ char runes[RUNES_NUM] = {
 };
 volatile int16_t textInputCursor = 0;
 
+volatile bool doDisplayTxRDS = false;
+
+void tickTxRDSDisplay() {
+    doDisplayTxRDS = true;
+}
+
 void txLoop(void *arg) {
     // TODO read from nonvolatile memory
     txFreq = JP_MINIMUM_FM_MHZ;
     int mainLoopTxFreq = txFreq;
     tx.tuneFM(txFreq * 10);
 
+    hw_timer_t *txRDSDisplayTicker = nullptr;
+    txRDSDisplayTicker = timerBegin(0, 80, true);
+    timerAttachInterrupt(txRDSDisplayTicker, &tickTxRDSDisplay, true);
+    timerAlarmWrite(txRDSDisplayTicker, 1000000, true);
+    timerAlarmEnable(txRDSDisplayTicker);
+
     while (true) {
         if (mainLoopTxFreq != txFreq) {
             tx.tuneFM(txFreq * 10);
             mainLoopTxFreq = txFreq;
             view.displayTxFreq(txFreq);
+
+            doDisplayTxRDS = false;
+            timerEnd(txRDSDisplayTicker);
+            txRDSDisplayTicker = timerBegin(0, 80, true);
+            timerAttachInterrupt(txRDSDisplayTicker, &tickTxRDSDisplay, true);
+            timerAlarmWrite(txRDSDisplayTicker, 300000, true);
+            timerAlarmEnable(txRDSDisplayTicker);
             delay(50);
         }
 
@@ -195,6 +214,8 @@ void txLoop(void *arg) {
             rdsBuff[txRDSBuffCursor] = runes[textInputCursor];
             view.displayTxRDSTextForInput(rdsBuff);
             delay(100);
+        } else if (doDisplayTxRDS) {
+            view.displayTxRDSTextAsMarquee(txRDSText);
         }
     }
 }
@@ -205,8 +226,8 @@ void nopLoop(void *arg) {
 }
 
 const static unsigned char defaultRXRDSText[RDS_TEXT_LENGTH + 1] = {
-        '<', 'N', 'O', ' ', 'R', 'D', 'S', ' ', 'D', 'A',
-        'T', 'A', '>', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+        '<', 'n', 'o', ' ', 'r', 'd', 's', ' ', 'd', 'a',
+        't', 'a', '>', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
         '\0'
 };
 
