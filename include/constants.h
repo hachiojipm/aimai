@@ -41,4 +41,10 @@
 #define TASK_READ_RDS_PERIODICALLY "read_rds_periodically"
 #define TASK_MAIN "main"
 
+#define EEPROM_LENGTH 1024
+#define EEPROM_IS_TX_RDS_WROTE_ADDR 0
+#define EEPROM_TX_RDS_TEXT_ADDR_BEGIN 1
+
+#define EEPROM_IS_TX_RDS_WROTE_MARKER 0x0a
+
 #endif //_AWIA_CONSTANTS_INC_GUARDS_H_

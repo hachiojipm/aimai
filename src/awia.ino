@@ -8,6 +8,7 @@
 #include <esp32-hal-log.h>
 #include <freertos/task.h>
 #include <esp32-hal-timer.h>
+#include <EEPROM.h>
 
 View view;
 Si4703_Breakout rx(RX_RST_PIN, SDA_PIN, SCL_PIN, UNUSED);
@@ -29,6 +30,8 @@ void setup() {
 
     view.begin();
     view.displayLogo();
+
+    EEPROM.begin(EEPROM_LENGTH);
 
     pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
     pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
@@ -92,9 +95,19 @@ void initTx() {
     tx.begin();
     tx.setTXpower(TX_POWER);
 
-    // TODO
     tx.beginRDS();
     tx.setRDSstation(STATION_NAME);
+    uint8_t isTxRDSTextWrote;
+    EEPROM.get(EEPROM_IS_TX_RDS_WROTE_ADDR, isTxRDSTextWrote);
+    if (isTxRDSTextWrote == EEPROM_IS_TX_RDS_WROTE_MARKER) {
+        char tmpTxRDSText[RDS_TEXT_LENGTH + 1];
+        for (int i = 0; i < RDS_TEXT_LENGTH + 1; i++) {
+            char c;
+            EEPROM.get(i + EEPROM_TX_RDS_TEXT_ADDR_BEGIN, c);
+            tmpTxRDSText[i] = c;
+        }
+        strcpy(txRDSText, tmpTxRDSText);
+    }
     tx.setRDSbuffer(txRDSText);
 }
 
@@ -201,6 +214,11 @@ void txLoop(void *arg) {
 
         if (txRDSTextChanged) {
             tx.setRDSbuffer(txRDSText);
+            EEPROM.put(EEPROM_IS_TX_RDS_WROTE_ADDR, EEPROM_IS_TX_RDS_WROTE_MARKER);
+            for (int i = 0; i < RDS_TEXT_LENGTH + 1; i++) {
+                EEPROM.put(EEPROM_TX_RDS_TEXT_ADDR_BEGIN + i, txRDSText[i]);
+            }
+            EEPROM.commit();
             txRDSTextChanged = false;
         }
 
