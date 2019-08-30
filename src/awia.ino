@@ -204,7 +204,7 @@ void nopLoop(void *arg) {
     }
 }
 
-char defaultRXRDSText[RDS_TEXT_LENGTH + 1] = {
+const static unsigned char defaultRXRDSText[RDS_TEXT_LENGTH + 1] = {
         '<', 'N', 'O', ' ', 'R', 'D', 'S', ' ', 'D', 'A',
         'T', 'A', '>', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
         '\0'
