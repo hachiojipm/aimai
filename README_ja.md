@@ -43,7 +43,8 @@ aimai: ESP32で動作するFMトランシーバー付き名札
 
 ### 必要なもの
 
-- [platformio](https://platformio.org)
+- [pythonz](https://github.com/saghul/pythonz)
+- [direnv](https://github.com/direnv/direnv)
 
 ### プロジェクトのブートストラップ方法
 

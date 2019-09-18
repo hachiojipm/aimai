@@ -45,7 +45,8 @@ HIGHLY RECOMMENDED: it should be plugged earphones into the RX module's (purple 
 
 ### Requirements
 
-- [platformio](https://platformio.org)
+- [pythonz](https://github.com/saghul/pythonz)
+- [direnv](https://github.com/direnv/direnv)
 
 ### How to bootstrap the project
 
