@@ -45,6 +45,12 @@ aimai: ESP32で動作するFMトランシーバー付き名札
 
 - [platformio](https://platformio.org)
 
+### プロジェクトのブートストラップ方法
+
+```
+$ make bootstrap
+```
+
 ### ビルド方法
 
 ```

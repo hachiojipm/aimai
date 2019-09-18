@@ -1,4 +1,4 @@
-(Japanese doc is here: [README.ja](./README_ja.md))
+(Japanese doc is here: [README_ja](./README_ja.md))
 
 ![logo](./doc/logo.png)
 
@@ -46,6 +46,12 @@ HIGHLY RECOMMENDED: it should be plugged earphones into the RX module's (purple 
 ### Requirements
 
 - [platformio](https://platformio.org)
+
+### How to bootstrap the project
+
+```
+$ make bootstrap
+```
 
 ### How to build
 
