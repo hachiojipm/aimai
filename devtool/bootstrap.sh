@@ -14,3 +14,6 @@ fi
 
 pip install platformio
 
+git submodule init
+git submodule update
+
